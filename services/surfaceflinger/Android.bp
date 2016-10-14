@@ -40,6 +40,7 @@ cc_defaults {
         "vendor.display.config@1.12",
         "vendor.display.config@1.16",
         "libbase",
+        "libbfqio",
         "libbinder",
         "libbufferhubqueue",
         "libcutils",
