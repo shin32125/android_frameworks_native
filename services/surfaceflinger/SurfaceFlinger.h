@@ -453,7 +453,8 @@ private:
     status_t updateDimensionsLocked(const sp<const DisplayDevice>& displayDevice,
                                      Transform::orientation_flags* rotation,
                                      int32_t hardwareRotation,
-                                     uint32_t* requestedWidth, uint32_t* requestedHeight);
+                                     uint32_t* requestedWidth, uint32_t* requestedHeight,
+                                     int hwOrientation);
 
     status_t captureScreenImplLocked(const sp<const DisplayDevice>& device,
                                      ANativeWindowBuffer* buffer, Rect sourceCrop,
@@ -826,6 +827,12 @@ private:
 
     float mSaturation = 1.0f;
     bool mForceNativeColorMode = false;
+
+public:
+    int getHwOrientation() { return mHwOrientation; }
+private:
+    // for phyical panel orientation info
+    int mHwOrientation;
 };
 }; // namespace android
 
