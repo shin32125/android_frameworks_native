@@ -21,6 +21,7 @@
 #include <cutils/properties.h>
 #include <hardware/sensors.h>
 #include <hardware_legacy/power.h>
+#include <log/log.h>
 #include <openssl/digest.h>
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
@@ -190,9 +191,10 @@ void SensorService::onFirstRef() {
                 // available in the HAL
                 bool needRotationVector =
                         (virtualSensorsNeeds & (1<<SENSOR_TYPE_ROTATION_VECTOR)) != 0;
+                bool needOrientation = orientationIndex == -1;
 
                 registerSensor(new RotationVectorSensor(), !needRotationVector, true);
-                registerSensor(new OrientationSensor(), !needRotationVector, true);
+                registerSensor(new OrientationSensor(), !needOrientation, true);
 
                 bool needLinearAcceleration =
                         (virtualSensorsNeeds & (1<<SENSOR_TYPE_LINEAR_ACCELERATION)) != 0;
@@ -993,10 +995,15 @@ sp<ISensorEventConnection> SensorService::createSensorDirectConnection(
     // check specific to memory type
     switch(type) {
         case SENSOR_DIRECT_MEM_TYPE_ASHMEM: { // channel backed by ashmem
+            if (resource->numFds < 1) {
+                ALOGE("Ashmem direct channel requires a memory region to be supplied");
+                android_errorWriteLog(0x534e4554, "70986337");  // SafetyNet
+                return nullptr;
+            }
             int fd = resource->data[0];
             int size2 = ashmem_get_size_region(fd);
             // check size consistency
-            if (size2 < static_cast<int>(size)) {
+            if (size2 < static_cast<int64_t>(size)) {
                 ALOGE("Ashmem direct channel size %" PRIu32 " greater than shared memory size %d",
                       size, size2);
                 return nullptr;
