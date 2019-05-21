@@ -286,13 +286,13 @@ void Scheduler::setVsyncPeriod(const nsecs_t period, bool force_resync) {
     }
 }
 
-void Scheduler::addResyncSample(const nsecs_t timestamp, bool* periodChanged) {
+void Scheduler::addResyncSample(const nsecs_t timestamp, bool* periodFlushed) {
     bool needsHwVsync = false;
-    *periodChanged = false;
+    *periodFlushed = false;
     { // Scope for the lock
         std::lock_guard<std::mutex> lock(mHWVsyncLock);
         if (mPrimaryHWVsyncEnabled) {
-            needsHwVsync = mPrimaryDispSync->addResyncSample(timestamp, periodChanged);
+            needsHwVsync = mPrimaryDispSync->addResyncSample(timestamp, periodFlushed);
         }
     }
 
@@ -421,7 +421,7 @@ void Scheduler::resetKernelTimerCallback() {
     ATRACE_INT("ExpiredKernelIdleTimer", 0);
     std::lock_guard<std::mutex> lock(mCallbackLock);
     if (mGetVsyncPeriod) {
-        resyncToHardwareVsync(false, mGetVsyncPeriod());
+        resyncToHardwareVsync(true, mGetVsyncPeriod());
     }
 }
 
