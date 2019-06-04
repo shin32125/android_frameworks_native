@@ -1755,21 +1755,31 @@ void SurfaceFlinger::onRefreshReceived(int sequenceId, hwc2_display_t /*hwcDispl
 
 void SurfaceFlinger::setVsyncEnabled(bool enabled) {
     ATRACE_CALL();
-    Mutex::Autolock lock(mStateLock);
+
+    // Enable / Disable HWVsync from the main thread to avoid race conditions with
+    // display power state.
+    postMessageAsync(new LambdaMessage(
+            [=]() NO_THREAD_SAFETY_ANALYSIS { setVsyncEnabledInternal(enabled); }));
+}
+
+void SurfaceFlinger::setVsyncEnabledInternal(bool enabled) {
+    ATRACE_CALL();
     Mutex::Autolock lockVsync(mVsyncLock);
+
+    mHWCVsyncPendingState = enabled ? HWC2::Vsync::Enable : HWC2::Vsync::Disable;
+
     auto displayId = getInternalDisplayIdLocked();
     if (mNextVsyncSource) {
         // Disable current vsync source before enabling the next source
         if (mActiveVsyncSource) {
             displayId = mActiveVsyncSource->getId();
-            getHwComposer().setVsyncEnabled(*displayId, HWC2::Vsync::Disable);
+            setVsyncEnabledInHWC(*displayId, HWC2::Vsync::Disable);
         }
         displayId = mNextVsyncSource->getId();
     } else if (mActiveVsyncSource) {
         displayId = mActiveVsyncSource->getId();
     }
-    getHwComposer().setVsyncEnabled(*displayId,
-        enabled ? HWC2::Vsync::Enable : HWC2::Vsync::Disable);
+    setVsyncEnabledInHWC(*displayId, mHWCVsyncPendingState);
     if (mNextVsyncSource) {
         mActiveVsyncSource = mNextVsyncSource;
         mNextVsyncSource = NULL;
@@ -5044,6 +5054,13 @@ void SurfaceFlinger::initializeDisplays() {
             new LambdaMessage([this]() NO_THREAD_SAFETY_ANALYSIS { onInitializeDisplays(); }));
 }
 
+void SurfaceFlinger::setVsyncEnabledInHWC(DisplayId displayId, HWC2::Vsync enabled) {
+    if (mHWCVsyncState != enabled) {
+        getHwComposer().setVsyncEnabled(displayId, enabled);
+        mHWCVsyncState = enabled;
+    }
+}
+
 void SurfaceFlinger::setPowerModeInternal(const sp<DisplayDevice>& display, int mode) {
     if (display->isVirtual()) {
         ALOGE("%s: Invalid operation on virtual display", __FUNCTION__);
@@ -5078,6 +5095,7 @@ void SurfaceFlinger::setPowerModeInternal(const sp<DisplayDevice>& display, int 
         getHwComposer().setPowerMode(*displayId, mode);
         if (isDummyDisplay) {
             if (display->isPrimary() && mode != HWC_POWER_MODE_DOZE_SUSPEND) {
+                setVsyncEnabledInHWC(*displayId, mHWCVsyncPendingState);
                 mScheduler->onScreenAcquired(mAppConnectionHandle);
                 mScheduler->resyncToHardwareVsync(true, getVsyncPeriod());
             }
@@ -5121,6 +5139,9 @@ void SurfaceFlinger::setPowerModeInternal(const sp<DisplayDevice>& display, int 
                 mScheduler->disableHardwareVsync(true);
                 mScheduler->onScreenReleased(mAppConnectionHandle);
             }
+
+            // Make sure HWVsync is disabled before turning off the display
+            setVsyncEnabledInHWC(*displayId, HWC2::Vsync::Disable);
         } else {
             updateVsyncSource();
         }

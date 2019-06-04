@@ -307,6 +307,9 @@ public:
     // TODO: this should be made accessible only to EventThread
     void setVsyncEnabled(bool enabled);
 
+    // main thread function to enable/disable h/w composer event
+    void setVsyncEnabledInternal(bool enabled);
+
     // called on the main thread by MessageQueue when an internal message
     // is received
     // TODO: this should be made accessible only to MessageQueue
@@ -877,6 +880,7 @@ private:
     }
 
     bool previousFrameMissed();
+    void setVsyncEnabledInHWC(DisplayId displayId, HWC2::Vsync enabled);
 
     /*
      * Debugging & dumpsys
@@ -1251,6 +1255,10 @@ private:
     // The Layer pointer is removed from the set when the destructor is called so there shouldn't
     // be any issues with a raw pointer referencing an invalid object.
     std::unordered_set<Layer*> mOffscreenLayers;
+
+   // Flags to capture the state of Vsync in HWC
+    HWC2::Vsync mHWCVsyncState = HWC2::Vsync::Disable;
+    HWC2::Vsync mHWCVsyncPendingState = HWC2::Vsync::Disable;
 
 public:
     nsecs_t mVsyncTimeStamp = -1;
