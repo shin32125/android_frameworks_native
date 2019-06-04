@@ -674,8 +674,8 @@ public:
     }
 
     sp<ISurfaceComposerClient> createConnection() override { return nullptr; }
-    sp<IDisplayEventConnection> createDisplayEventConnection(ISurfaceComposer::VsyncSource)
-            override {
+    sp<IDisplayEventConnection> createDisplayEventConnection(
+            ISurfaceComposer::VsyncSource, ISurfaceComposer::ConfigChanged) override {
         return nullptr;
     }
     sp<IBinder> createDisplay(const String8& /*displayName*/,
