@@ -7110,8 +7110,6 @@ void SurfaceFlinger::setAllowedDisplayConfigsInternal(const sp<DisplayDevice>& d
         return;
     }
 
-    ALOGV("Updating allowed configs");
-
     std::vector<int32_t> displayConfigs;
     for (int i = 0; i < allowedConfigs.size(); i++) {
         displayConfigs.push_back(allowedConfigs.at(i));
@@ -7121,7 +7119,20 @@ void SurfaceFlinger::setAllowedDisplayConfigsInternal(const sp<DisplayDevice>& d
     mRefreshRateConfigs.getAllowedConfigs(getHwComposer().getConfigs(*display->getId()),
                                           &displayConfigs);
 
-    mAllowedDisplayConfigs = DisplayConfigs(displayConfigs.begin(), displayConfigs.end());
+    const auto allowedDisplayConfigs = DisplayConfigs(displayConfigs.begin(),
+                                                      displayConfigs.end());
+    if (allowedDisplayConfigs == mAllowedDisplayConfigs) {
+        return;
+    }
+
+    ALOGV("Updating allowed configs");
+    mAllowedDisplayConfigs = std::move(allowedDisplayConfigs);
+
+    // TODO(b/140204874): This hack triggers a notification that something has changed, so
+    // that listeners that care about a change in allowed configs can get the notification.
+    // Giving current ActiveConfig so that most other listeners would just drop the event
+    mScheduler->onConfigChanged(mAppConnectionHandle, display->getId()->value,
+                                display->getActiveConfig());
 
     setPreferredDisplayConfig();
 }
