@@ -67,6 +67,7 @@ PhaseOffsets::PhaseOffsets() {
     property_get("debug.sf.high_fps_late_sf_phase_offset_ns", value, "1000000");
     const int highFpsLateSfOffsetNs = atoi(value);
 
+#ifdef QCOM_UM_FAMILY
     // Phase Offsets for PERFORMANCE Refresh Rate type.
     property_get("debug.sf.perf_fps_early_phase_offset_ns", value, "-1");
     const int perfFpsEarlySfOffsetNs = atoi(value);
@@ -85,6 +86,7 @@ PhaseOffsets::PhaseOffsets() {
 
     property_get("debug.sf.perf_fps_late_app_phase_offset_ns", value, "-1");
     const int perfFpsLateAppOffsetNs = atoi(value);
+#endif
 
     // Below defines the threshold when an offset is considered to be negative, i.e. targeting
     // for the N+2 vsync instead of N+1. This means that:
@@ -95,7 +97,9 @@ PhaseOffsets::PhaseOffsets() {
 
     Offsets defaultOffsets;
     Offsets highFpsOffsets;
+#ifdef QCOM_UM_FAMILY
     Offsets perfFpsOffsets;
+#endif
 
     defaultOffsets.early = {RefreshRateType::DEFAULT,
                             earlySfOffsetNs != -1 ? earlySfOffsetNs : sfVsyncPhaseOffsetNs,
