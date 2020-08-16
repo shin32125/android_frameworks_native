@@ -5140,6 +5140,9 @@ void SurfaceFlinger::setPowerModeInternal(const sp<DisplayDevice>& display, int 
                 mScheduler->disableHardwareVsync(true);
                 mScheduler->onScreenReleased(mAppConnectionHandle);
             }
+
+            // Make sure HWVsync is disabled before turning off the display
+            setVsyncEnabledInHWC(*displayId, HWC2::Vsync::Disable);
         } else {
             updateVsyncSource();
         }
@@ -5165,9 +5168,6 @@ void SurfaceFlinger::setPowerModeInternal(const sp<DisplayDevice>& display, int 
                 mScheduler->disableHardwareVsync(true);
                 mScheduler->onScreenReleased(mAppConnectionHandle);
             }
-
-            // Make sure HWVsync is disabled before turning off the display
-            setVsyncEnabledInHWC(*displayId, HWC2::Vsync::Disable);
         } else {
             updateVsyncSource();
         }
