@@ -5148,8 +5148,9 @@ void SurfaceFlinger::setPowerModeInternal(const sp<DisplayDevice>& display, int 
                 mScheduler->onScreenAcquired(mAppConnectionHandle);
                 mScheduler->resyncToHardwareVsync(true, getVsyncPeriod());
             }
-        } else if ((mPluggableVsyncPrioritized && (displayId != getInternalDisplayIdLocked())) ||
-                    displayId == getInternalDisplayIdLocked()) {
+        } else if ((mPluggableVsyncPrioritized && !display->getIsDisplayBuiltInType()) ||
+                   (displayId == getInternalDisplayIdLocked()) ||
+                   display->getIsDisplayBuiltInType()) {
             updateVsyncSource();
         }
 
