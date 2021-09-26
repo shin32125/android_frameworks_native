@@ -35,10 +35,6 @@
 #include "Scheduler/LayerHistory.h"
 #include "TimeStats/TimeStats.h"
 
-#ifdef QCOM_UM_FAMILY
-#include "smomo_interface.h"
-#endif
-
 namespace android {
 
 BufferQueueLayer::BufferQueueLayer(const LayerCreationArgs& args) : BufferLayer(args) {}
@@ -127,19 +123,7 @@ bool BufferQueueLayer::shouldPresentNow(nsecs_t expectedPresentTime) const {
         mFlinger->mTimeStats->incrementBadDesiredPresent(getSequence());
     }
 
-    bool isDue = addedTime < expectedPresentTime;
-
-#ifdef QCOM_UM_FAMILY
-    if (isDue && mFlinger->mSmoMo) {
-        smomo::SmomoBufferStats bufferStats;
-        bufferStats.id = getSequence();
-        bufferStats.queued_frames = getQueuedFrameCount();
-        bufferStats.auto_timestamp = mQueueItems[0].mIsAutoTimestamp;
-        bufferStats.timestamp = mQueueItems[0].mTimestamp;
-        bufferStats.dequeue_latency = 0;
-        isDue = mFlinger->mSmoMo->ShouldPresentNow(bufferStats, expectedPresentTime);
-    }
-#endif
+    const bool isDue = addedTime < expectedPresentTime;
     return isDue || !isPlausible;
 }
 
@@ -460,18 +444,6 @@ void BufferQueueLayer::onFrameAvailable(const BufferItem& item) {
 
     mFlinger->mInterceptor->saveBufferUpdate(layerId, item.mGraphicBuffer->getWidth(),
                                              item.mGraphicBuffer->getHeight(), item.mFrameNumber);
-
-#ifdef QCOM_UM_FAMILY
-    if (mFlinger->mSmoMo) {
-        smomo::SmomoBufferStats bufferStats;
-        bufferStats.id = getSequence();
-        bufferStats.queued_frames = getQueuedFrameCount();
-        bufferStats.auto_timestamp = item.mIsAutoTimestamp;
-        bufferStats.timestamp = item.mTimestamp;
-        bufferStats.dequeue_latency = 0;
-        mFlinger->mSmoMo->CollectLayerStats(bufferStats);
-    }
-#endif
 
     mFlinger->signalLayerUpdate();
     mConsumer->onBufferAvailable(item);
